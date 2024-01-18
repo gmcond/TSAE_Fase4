@@ -104,42 +104,18 @@ public class Log implements Serializable {
 	 * @return list of operations
 	 */
 	public synchronized List<Operation> listNewer(TimestampVector sum){
-		List<Operation> newOperations = new ArrayList<>();
+		List<Operation> operations = new ArrayList<>();
 
 		for (String hostId : this.log.keySet()) {
-			List<Operation> operations = this.log.get(hostId);
-			Timestamp last = operations.get(operations.size()-1).getTimestamp();
-
 			Timestamp hostIdLastTimestamp = sum.getLast(hostId);
-
-			if(last.compare(hostIdLastTimestamp) > 0) {
-				if(hostIdLastTimestamp.isNullTimestamp()) {
-					newOperations.addAll(operations);
-				} else {
-					for(Operation op : operations) {
-						if (op.getTimestamp().compare(hostIdLastTimestamp) > 0)
-							newOperations.add(op);
-					}
+			for (Operation operation: this.log.get(hostId)) {
+				if (operation.getTimestamp().compare(hostIdLastTimestamp) > 0) {
+					operations.add(operation);
 				}
 			}
 		}
 
-		return newOperations;
-	}
-
-
-	public synchronized List<Operation> msgList(String pid, Timestamp first)
-	{
-		List<Operation> messages = new Vector<>();
-
-		for(Operation op : log.get(pid)) {
-			if(op.getTimestamp().compare(first) > 0) {
-				messages.add(op);
-			}
-		}
-
-		return messages;
-
+		return operations;
 	}
 
 	/**
@@ -152,23 +128,19 @@ public class Log implements Serializable {
 	public synchronized void purgeLog(TimestampMatrix ack){
 		TimestampVector minTSV = ack.minTimestampVector();
 		for (String hostId : log.keySet()) {
-			List<Operation> notToRemoveOperations = new ArrayList<>();
-			Timestamp last = minTSV.getLast(hostId);
-
-			if (!last.isNullTimestamp()) {
-				for (Operation operation : log.get(hostId)) {
-					if (!shouldPurgeOperation(hostId, operation, last)) {
-						notToRemoveOperations.add(operation);
-					}
+			List<Operation> notRemovedOperations = new ArrayList<>();
+			for (Operation operation : log.get(hostId)) {
+				if (!shouldPurgeOperation(hostId, operation, minTSV)) {
+					notRemovedOperations.add(operation);
 				}
-				log.put(hostId, notToRemoveOperations);
 			}
+			log.put(hostId, notRemovedOperations);
 		}
 	}
 
-	private boolean shouldPurgeOperation(String hostId, Operation operation, Timestamp last) {
+	private boolean shouldPurgeOperation(String hostId, Operation operation, TimestampVector minTSV) {
 		Timestamp opTimestamp = operation.getTimestamp();
-		return last != null && last.compare(opTimestamp) < 0;
+		return minTSV.getLast(hostId) != null && opTimestamp.compare(minTSV.getLast(hostId)) <= 0;
 	}
 
 	/**

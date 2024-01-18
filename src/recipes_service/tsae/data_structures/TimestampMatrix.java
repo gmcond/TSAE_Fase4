@@ -74,11 +74,7 @@ public class TimestampMatrix implements Serializable{
 	 * @param tsVector
 	 */
 	public void update(String node, TimestampVector tsVector){
-		if (timestampMatrix.containsKey(node)) {
-			timestampMatrix.replace(node, tsVector);
-		} else {
-			timestampMatrix.put(node, tsVector);
-		}
+		timestampMatrix.replace(node, tsVector);
 	}
 	
 	/**

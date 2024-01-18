@@ -149,14 +149,16 @@ public class ServerData {
 
 	}
 	
-	public synchronized void removeRecipe(String recipeTitle) {
-		if (recipes.contains(recipeTitle)) {
+	public synchronized void removeRecipe(String recipeTitle){
+		if(recipes.contains(recipeTitle))
+		{
 			Timestamp timestamp = nextTimestamp();
-			Recipe recipe = recipes.get(recipeTitle);
-			Operation op = new RemoveOperation(recipe.getTitle(), recipe.getTimestamp(), timestamp);
-			log.add(op);
-			summary.updateTimestamp(timestamp);
-			recipes.remove(recipeTitle);
+			Recipe rcpe = this.recipes.get(recipeTitle);
+			Operation op = new RemoveOperation(recipeTitle, rcpe.getTimestamp(), timestamp);
+
+			this.log.add(op);
+			this.summary.updateTimestamp(timestamp);
+			this.recipes.remove(recipeTitle);
 		}
 	}
 	
@@ -258,16 +260,14 @@ public class ServerData {
 	}
 
 	public synchronized void performOperation(Operation operation) {
-		if (operation == null) {
-			return;
-		}
 		if (log.add(operation)) {
 			if (isAddOperation(operation)) {
 				AddOperation addOperation = (AddOperation) operation;
-				Timestamp recipeTS = addOperation.getTimestamp();
-				if (tombstones.contains(recipeTS)) {
-					recipes.add(((AddOperation)operation).getRecipe());
+				Recipe recipe = addOperation.getRecipe();
+				if(!tombstones.contains(recipe.getTimestamp())) {
+					recipes.add(recipe);
 				}
+				recipes.add(((AddOperation)operation).getRecipe());
 			} else {
 				RemoveOperation r = (RemoveOperation) operation;
 				if(recipes.contains(r.getRecipeTitle())) {
@@ -276,7 +276,6 @@ public class ServerData {
 					tombstones.add(r.getRecipeTimestamp());
 				}
 			}
-
 		}
 	}
 
